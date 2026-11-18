@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        $prefix = config('workflow-pipelines.table_prefix', '');
+
+        Schema::create($prefix.'workflow_step_notifications', function (Blueprint $table) use ($prefix): void {
+            $table->id();
+            $table->foreignId('workflow_step_id')->constrained($prefix.'workflow_steps', 'id', 'wp_notifs_step_fk')->cascadeOnDelete();
+            $table->string('channel', 20);
+            $table->json('events');
+            $table->json('recipients');
+            $table->json('emails')->nullable();
+            $table->string('subject')->nullable();
+            $table->text('message')->nullable();
+            $table->json('model_types')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+            $table->index(['workflow_step_id', 'is_active'], 'wp_notifs_step_active_ix');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists(config('workflow-pipelines.table_prefix', '').'workflow_step_notifications');
+    }
+};

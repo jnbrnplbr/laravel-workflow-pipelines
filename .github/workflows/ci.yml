@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, mysql]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: workflow_pipelines
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, pdo_mysql
+          coverage: none
+      - uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+      - run: composer install --prefer-dist --no-interaction
+      - name: Run Pest on SQLite
+        if: matrix.database == 'sqlite'
+        run: vendor/bin/pest
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+      - name: Run Pest on MySQL
+        if: matrix.database == 'mysql'
+        run: vendor/bin/pest
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: workflow_pipelines
+          DB_USERNAME: root
+          DB_PASSWORD: password
+      - run: composer analyse
+      - run: composer format:check

@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        $prefix = config('workflow-pipelines.table_prefix', '');
+
+        Schema::create($prefix.'workflow_steps', function (Blueprint $table) use ($prefix): void {
+            $table->id();
+            $table->foreignId('workflow_id')->constrained($prefix.'workflows', 'id', 'wp_steps_workflow_fk')->cascadeOnDelete();
+            $table->foreignId('role_id')->constrained(config('workflow-pipelines.tables.roles'), 'id', 'wp_steps_role_fk')->restrictOnDelete();
+            $table->unsignedInteger('sequence');
+            $table->boolean('assignable')->default(false);
+            $table->boolean('editable')->default(false);
+            $table->foreignId('status_id')->constrained(config('workflow-pipelines.tables.statuses'), 'id', 'wp_steps_status_fk')->restrictOnDelete();
+            $table->timestamps();
+            $table->unique(['workflow_id', 'sequence'], 'wp_steps_workflow_seq_uq');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists(config('workflow-pipelines.table_prefix', '').'workflow_steps');
+    }
+};
